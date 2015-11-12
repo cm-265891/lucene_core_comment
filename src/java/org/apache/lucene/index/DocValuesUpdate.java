@@ -27,6 +27,7 @@ import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.RamUsageEstimator;
 
+// C: Lucene supports in-place update for DocValues field in 5.* ??
 /** An in-place update to a DocValues field. */
 abstract class DocValuesUpdate {
   

@@ -385,6 +385,9 @@ final class DocumentsWriter implements Closeable, Accountable {
     return hasEvents;
   }
   
+  /**
+   * C: initialize uninitialized <code>state</code>. A new DWPT object will be created if <code>state.dwpt</code> is null.
+   */
   private void ensureInitialized(ThreadState state) throws IOException {
     if (state.dwpt == null) {
       final FieldInfos.Builder infos = new FieldInfos.Builder(writer.globalFieldNumberMap);
@@ -430,6 +433,10 @@ final class DocumentsWriter implements Closeable, Accountable {
     return postUpdate(flushingDWPT, hasEvents);
   }
 
+  /**
+   * C: This method implements both 'insert' and 'update' operations. <code>delTerm</code> will be null while 
+   * it is a 'insert' operation.
+   */
   boolean updateDocument(final Iterable<? extends IndexableField> doc, final Analyzer analyzer,
       final Term delTerm) throws IOException, AbortingException {
 

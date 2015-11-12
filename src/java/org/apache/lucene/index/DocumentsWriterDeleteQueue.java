@@ -121,6 +121,7 @@ final class DocumentsWriterDeleteQueue implements Accountable {
   /**
    * invariant for document update
    */
+  //C: Why should slice.sliceTail point to the new created node??
   void add(Term term, DeleteSlice slice) {
     final TermNode termNode = new TermNode(term);
 //    System.out.println(Thread.currentThread().getName() + ": push " + termNode + " this=" + this);
@@ -141,6 +142,12 @@ final class DocumentsWriterDeleteQueue implements Accountable {
     // we can do it just every n times or so?
   }
 
+  /**
+   * This method simply appends <code>item</code> to <code>this.tail</code> and 
+   * let <code>this.tail</code> point to the tail. 
+   * Using Pessimistic Lock mechanism to achieve 'wait-free'.
+   * @param item
+   */
   void add(Node<?> item) {
     /*
      * this non-blocking / 'wait-free' linked list add was inspired by Apache
@@ -149,6 +156,7 @@ final class DocumentsWriterDeleteQueue implements Accountable {
     while (true) {
       final Node<?> currentTail = this.tail;
       final Node<?> tailNext = currentTail.next;
+      //C: 'tail' may have been modified by another thread
       if (tail == currentTail) {
         if (tailNext != null) {
           /*
@@ -177,6 +185,14 @@ final class DocumentsWriterDeleteQueue implements Accountable {
     }
   }
 
+  /**
+   * C: 
+   * return true iff any of following conditions is true:<br/>
+   * 1. some items in the global slice have not been applied <br/>
+   * 2. the global slice is not up-to-date(<code>globalSlice.sliceTail != tail</code>) <br/>
+   * 3. globalBufferedUpdates has changes <br/>
+   * 4. <code>tail</code> is not pointing to the tail
+   */
   boolean anyChanges() {
     globalBufferLock.lock();
     try {
@@ -192,6 +208,10 @@ final class DocumentsWriterDeleteQueue implements Accountable {
     }
   }
 
+  /**
+   * C: Apply all nodes between <code>globalSlice.sliceHead</code> and <code>tail</code> to 
+   * <code>globalBufferedUpdates</code>
+   */
   void tryApplyGlobalSlice() {
     if (globalBufferLock.tryLock()) {
       /*
@@ -211,6 +231,13 @@ final class DocumentsWriterDeleteQueue implements Accountable {
     }
   }
 
+  /**
+   * C:<br/>
+   * Let <code>callerSlice.sliceTail</code> point to <code>tail</code> <br/>
+   * Apply nodes of <code>globalSlice</code> to <code>globalBufferedUpdates</code>. <br/>
+   * Froze <code>globalBufferedUpdates</code> to a packet before clearing it. </br>
+   * Return the frozen packet. </br>
+   */
   FrozenBufferedUpdates freezeGlobalBuffer(DeleteSlice callerSlice) {
     globalBufferLock.lock();
     /*
@@ -245,6 +272,10 @@ final class DocumentsWriterDeleteQueue implements Accountable {
     return new DeleteSlice(tail);
   }
 
+  /**
+   * C: Update <code>slice.sliceTail</code> to global <code>tail</code>. 
+   * @return true if <code>slice.sliceTail</code> is changed.
+   */
   boolean updateSlice(DeleteSlice slice) {
     if (slice.sliceTail != tail) { // If we are the same just
       slice.sliceTail = tail;
@@ -268,6 +299,10 @@ final class DocumentsWriterDeleteQueue implements Accountable {
       sliceHead = sliceTail = currentTail;
     }
 
+    /**
+     * C: Apply all nodes between 'head' and 'tail' to <code>del</code> 
+     * and reset <code>sliceHead</code> to the <code>sliceTail</code>.
+     */
     void apply(BufferedUpdates del, int docIDUpto) {
       if (sliceHead == sliceTail) {
         // 0 length slice
@@ -311,6 +346,9 @@ final class DocumentsWriterDeleteQueue implements Accountable {
     return globalBufferedUpdates.numTermDeletes.get();
   }
 
+  /**
+   * C: Clear all nodes between <code>globalSlice.sliceHead</code> and <code>tail</code>.
+   */
   void clear() {
     globalBufferLock.lock();
     try {
