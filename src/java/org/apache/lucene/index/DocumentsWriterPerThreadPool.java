@@ -16,12 +16,11 @@ package org.apache.lucene.index;
  * limitations under the License.
  */
 
-import org.apache.lucene.util.ThreadInterruptedException;
-import org.apache.lucene.util.ThreadInterruptedException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.lucene.util.ThreadInterruptedException;
 
 /**
  * {@link DocumentsWriterPerThreadPool} controls {@link ThreadState} instances
@@ -168,6 +167,7 @@ final class DocumentsWriterPerThreadPool {
     synchronized (this) {
       if (freeList.isEmpty()) {
         // ThreadState is already locked before return by this method:
+	//C: The number of ThreadState objects is unlimited??
         return newThreadState();
       } else {
         // Important that we are LIFO here! This way if number of concurrent indexing threads was once high, but has now reduced, we only use a

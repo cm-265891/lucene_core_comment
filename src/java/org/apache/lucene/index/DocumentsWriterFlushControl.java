@@ -58,6 +58,7 @@ final class DocumentsWriterFlushControl implements Accountable {
   private final Queue<BlockedFlush> blockedFlushes = new LinkedList<>();
 
   //C: 'numPending' will decrease by one while a DWPT is added to this Map. What's this Map for??
+  //C: What is the relationship of 'blockedFlushes', 'flushingWriters' , 'flushQueue' and 'fullFlushBuffer'
   private final IdentityHashMap<DocumentsWriterPerThread, Long> flushingWriters = new IdentityHashMap<>();
 
   double maxConfiguredRamBuffer = 0;
@@ -143,6 +144,10 @@ final class DocumentsWriterFlushControl implements Accountable {
     return true;
   }
 
+  /**
+   * C: Add memory used infomation of <code>perThread.dwpt</code> to <code>perThread</code>.
+   * @param perThread
+   */
   private void commitPerThreadBytes(ThreadState perThread) {
     final long delta = perThread.dwpt.bytesUsed() - perThread.bytesUsed;
     perThread.bytesUsed += delta;
@@ -297,6 +302,11 @@ final class DocumentsWriterFlushControl implements Accountable {
     return perThread.flushPending ? internalTryCheckOutForFlush(perThread) : null;
   }
 
+  /**
+   * Add <code>perThread.dwpt</code> to <code>blockedFlushes</code> and reset <code>perThread</code>. <br/>
+   * 'checkout' means a DWPT needs flushing but must not be flushed until the full flush has finished.
+   * @param perThread
+   */
   private void checkoutAndBlock(ThreadState perThread) {
     perThread.lock();
     try {
@@ -348,7 +358,11 @@ final class DocumentsWriterFlushControl implements Accountable {
   public String toString() {
     return "DocumentsWriterFlushControl [activeBytes=" + activeBytes + ", flushBytes=" + flushBytes + "]";
   }
-
+  /**
+   * C: Get the next dwpt that need to be flushed. This dwpt comes from <code>flushQueue</code> if it is not empty, otherwise
+   * a flushPending dwpt is checkouted and retured.
+   * @return
+   */
   DocumentsWriterPerThread nextPendingFlush() {
     int numPending;
     boolean fullFlush;
@@ -444,6 +458,9 @@ final class DocumentsWriterFlushControl implements Accountable {
     return flushDeletes.getAndSet(false);
   }
 
+  /**
+   * C: This is called by the FlushPolicy when a flush of all buffered delete is required.
+   */
   public void setApplyAllDeletes() {
     flushDeletes.set(true);
   }
@@ -454,10 +471,7 @@ final class DocumentsWriterFlushControl implements Accountable {
 
   /**
    * C: 
-   * Current thread try to lock and obtain a <code>ThreadState</code> object. Under default settings, only 8 
-   * <code>ThreadState</code>s are available. As a result, only 8 threads can hold its owner 
-   * <code>ThreadState</code> concurrently. And other threads will wait until a <code>ThreadState</code> object
-   * is released.
+   * Current thread try to lock and obtain a <code>ThreadState</code> object. 
    */
   ThreadState obtainAndLock() {
     final ThreadState perThread = perThreadPool.getAndLock(Thread.currentThread(), documentsWriter);
@@ -480,9 +494,13 @@ final class DocumentsWriterFlushControl implements Accountable {
     }
   }
 
+  /**
+   * C: Create a new DWDeleteQueue and add dwpts of the old DWDeleteQueue to <code>flushingWriters</code>.
+   */
   void markForFullFlush() {
     final DocumentsWriterDeleteQueue flushingQueue;
     synchronized (this) {
+      //C: Why is fullFlush asserted to be false??
       assert !fullFlush : "called DWFC#markForFullFlush() while full flush is still running";
       assert fullFlushBuffer.isEmpty() : "full flush buffer should be empty: " + fullFlushBuffer;
       fullFlush = true;
@@ -545,7 +563,8 @@ final class DocumentsWriterFlushControl implements Accountable {
 
   /**
    * C:
-   * Set perThread as flushPending. <code>perThread.dwpt</code> becomes null again, and will point to 
+   * Add <code>perThread.dwpt</code> to <code>fullFlushBuffer</code> and <code>flushingWriters</code>. 
+   * After this method, <code>perThread</code> is reset, and will associate to 
    * a new DWPT object in next initializing.
    */
   void addFlushableState(ThreadState perThread) {
@@ -590,6 +609,9 @@ final class DocumentsWriterFlushControl implements Accountable {
     }
   }
 
+  /**
+   * C: Ensure that <code>blockedFlushes</code> is empty and rest <code>fullFlush</code> to false.
+   */
   synchronized void finishFullFlush() {
     assert fullFlush;
     assert flushQueue.isEmpty();

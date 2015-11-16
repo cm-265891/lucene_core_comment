@@ -435,7 +435,7 @@ final class DocumentsWriter implements Closeable, Accountable {
 
   /**
    * C: This method implements both 'insert' and 'update' operations. <code>delTerm</code> will be null while 
-   * it is a 'insert' operation.
+   * it is a'insert' operation.
    */
   boolean updateDocument(final Iterable<? extends IndexableField> doc, final Analyzer analyzer,
       final Term delTerm) throws IOException, AbortingException {
