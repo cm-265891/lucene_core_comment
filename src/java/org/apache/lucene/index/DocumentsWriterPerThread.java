@@ -17,6 +17,9 @@ package org.apache.lucene.index;
  * limitations under the License.
  */
 
+import static org.apache.lucene.util.ByteBlockPool.BYTE_BLOCK_MASK;
+import static org.apache.lucene.util.ByteBlockPool.BYTE_BLOCK_SIZE;
+
 import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.Collections;
@@ -43,9 +46,6 @@ import org.apache.lucene.util.MutableBits;
 import org.apache.lucene.util.RamUsageEstimator;
 import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.Version;
-
-import static org.apache.lucene.util.ByteBlockPool.BYTE_BLOCK_MASK;
-import static org.apache.lucene.util.ByteBlockPool.BYTE_BLOCK_SIZE;
 
 class DocumentsWriterPerThread {
 
@@ -423,6 +423,7 @@ class DocumentsWriterPerThread {
       pendingUpdates.terms.clear();
       segmentInfo.setFiles(new HashSet<>(directory.getCreatedFiles()));
 
+      //C: Other parameters(delCount, delGen, fieldInfoGen, docValuesGen) will be set somewhere else?
       final SegmentCommitInfo segmentInfoPerCommit = new SegmentCommitInfo(segmentInfo, 0, -1L, -1L, -1L);
       if (infoStream.isEnabled("DWPT")) {
         infoStream.message("DWPT", "new segment has " + (flushState.liveDocs == null ? 0 : flushState.delCountOnFlush) + " deleted docs");

@@ -59,6 +59,7 @@ final class DefaultIndexingChain extends DocConsumer {
   private PerField[] fieldHash = new PerField[2];
   private int hashMask = 1;
 
+  // C: Total number of fields that have been seen in this segment.
   private int totalFieldCount;
   private long nextFieldGen;
 
