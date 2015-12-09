@@ -495,7 +495,7 @@ final class DocumentsWriterFlushControl implements Accountable {
   }
 
   /**
-   * C: Create a new DWDeleteQueue and add dwpts of the old DWDeleteQueue to <code>flushingWriters</code>.
+   * C: Create a new DWDeleteQueue and add dwpts of the old DWDeleteQueue to <code>flushingWriters</code> and <code>flushQueue</code>.
    */
   void markForFullFlush() {
     final DocumentsWriterDeleteQueue flushingQueue;
