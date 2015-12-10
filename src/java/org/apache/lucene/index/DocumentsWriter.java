@@ -107,6 +107,7 @@ final class DocumentsWriter implements Closeable, Accountable {
 
   private final AtomicInteger numDocsInRAM = new AtomicInteger(0);
 
+  //C: A new DocumentsWriterDeleteQueue instance will be assigned every time a full-flush is triggered.
   // TODO: cut over to BytesRefHash in BufferedDeletes
   volatile DocumentsWriterDeleteQueue deleteQueue = new DocumentsWriterDeleteQueue();
   private final DocumentsWriterFlushQueue ticketQueue = new DocumentsWriterFlushQueue();

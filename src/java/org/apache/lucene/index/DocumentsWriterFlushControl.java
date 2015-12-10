@@ -58,7 +58,11 @@ final class DocumentsWriterFlushControl implements Accountable {
   private final Queue<BlockedFlush> blockedFlushes = new LinkedList<>();
 
   //C: 'numPending' will decrease by one while a DWPT is added to this Map. What's this Map for??
-  //C: What is the relationship of 'blockedFlushes', 'flushingWriters' , 'flushQueue' and 'fullFlushBuffer'
+  //C: What is the relationship of 'blockedFlushes', 'flushingWriters' , 'flushQueue' and 'fullFlushBuffer'?
+  //C: 'flushingWriters' stores all flushing DWPTs. 'blockedFlushes' stores DWPTs that are ready to be flushed
+  //C: but are blocked because a full-flush is in process.  'flushQueue' buffers all DWPTs that are about to be 
+  //C: flushed during a full-flush. All DWPTs in 'flushQueue' will be flushed during current full-flush while some DWPTs
+  //C: in 'blockedFlushes' are not. 
   private final IdentityHashMap<DocumentsWriterPerThread, Long> flushingWriters = new IdentityHashMap<>();
 
   double maxConfiguredRamBuffer = 0;
@@ -477,7 +481,7 @@ final class DocumentsWriterFlushControl implements Accountable {
     final ThreadState perThread = perThreadPool.getAndLock(Thread.currentThread(), documentsWriter);
     boolean success = false;
     try {
-      //C: DW.deleteQueue will point to a new object while flush-all happends??
+      //C: DW.deleteQueue will point to a new object while flush-all happends?? YES!
       if (perThread.isInitialized() && perThread.dwpt.deleteQueue != documentsWriter.deleteQueue) {
 	// There is a flush-all in process and this DWPT is
 	// now stale -- enroll it for flush and try for
@@ -500,7 +504,7 @@ final class DocumentsWriterFlushControl implements Accountable {
   void markForFullFlush() {
     final DocumentsWriterDeleteQueue flushingQueue;
     synchronized (this) {
-      //C: Why is fullFlush asserted to be false??
+      //C: Why is fullFlush asserted to be false?? fullFlushLock of IW makes sure that full-flush can not be executed concurrently.
       assert !fullFlush : "called DWFC#markForFullFlush() while full flush is still running";
       assert fullFlushBuffer.isEmpty() : "full flush buffer should be empty: " + fullFlushBuffer;
       fullFlush = true;
@@ -584,6 +588,7 @@ final class DocumentsWriterFlushControl implements Accountable {
 	final DocumentsWriterPerThread flushingDWPT = internalTryCheckOutForFlush(perThread);
 	assert flushingDWPT != null : "DWPT must never be null here since we hold the lock and it holds documents";
 	assert dwpt == flushingDWPT : "flushControl returned different DWPT";
+	//C: Why not directly add it to 'flushQueue'? 'fullFlushBuffer' will be added to 'flushQueue' in markForFullFush().
 	fullFlushBuffer.add(flushingDWPT);
       }
     } else {
