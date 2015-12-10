@@ -164,6 +164,7 @@ class DocumentsWriterFlushQueue {
   }
 
   static abstract class FlushTicket {
+    //C: includes all global updates since previous flushing
     protected FrozenBufferedUpdates frozenUpdates;
     protected boolean published = false;
 

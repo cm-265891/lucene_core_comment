@@ -382,6 +382,8 @@ class DocumentsWriterPerThread {
       assert deleteSlice.isEmpty();
       deleteSlice.reset();
     }
+    //C: 'pendingUpdates' includes all deletes happened during the lifecycle of current DWPT and will be applied only to current segment.
+    //C: 'globalUpdates' includes all deletes since last flushing of the previous DWPT and will be applied to all segments ordered before current one.
     return globalUpdates;
   }
 

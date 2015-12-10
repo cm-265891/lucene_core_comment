@@ -301,6 +301,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit, Accountable {
   final AtomicInteger flushDeletesCount = new AtomicInteger();
 
   final ReaderPool readerPool = new ReaderPool();
+  //C: Buffer all updates marked with generation
   final BufferedUpdatesStream bufferedUpdatesStream;
 
   // This is a "write once" variable (like the organic dye
